@@ -6,29 +6,30 @@ import nacl from "tweetnacl";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import { Button } from "@/components/ui/button";
-import { ClipboardIcon, CheckIcon } from "@heroicons/react/24/outline"; // Import icons
+import { ClipboardIcon, CheckIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { RefreshCcw } from "lucide-react";
-import { Wallet, HDNodeWallet } from "ethers";// Import ethers
+import { Wallet, HDNodeWallet } from "ethers";
 
 export default function Home() {
   const [mnemonic, setMnemonic] = useState("");
   const [seed, setSeed] = useState("");
   const [solanaIndex, setSolanaIndex] = useState(0);
   const [wallets, setWallets] = useState([]);
-  const [ethWallets, setEthWallets] = useState([]); // State for Ethereum wallets
+  const [ethWallets, setEthWallets] = useState([]);
   const [ethIndex, setEthIndex] = useState(0);
-  const [mnemonicCopied, setMnemonicCopied] = useState(false); // New state
+  const [mnemonicCopied, setMnemonicCopied] = useState(false);
+  const [showPrivateKeys, setShowPrivateKeys] = useState({});
 
   async function generateSeed() {
     setSeed(await mnemonicToSeed(mnemonic));
   }
 
   async function generateEthWallet() {
-    const path = `m/44'/60'/${ethIndex}'/0/0`; // BIP44 path for Ethereum
+    const path = `m/44'/60'/${ethIndex}'/0/0`;
     const hdNode = HDNodeWallet.fromSeed(seed);
     const child = hdNode.derivePath(path);
     const privateKey = child.privateKey;
-    const wallet =  new Wallet(privateKey);
+    const wallet = new Wallet(privateKey);
 
     setEthIndex(ethIndex + 1);
     setEthWallets([
@@ -71,8 +72,8 @@ export default function Home() {
     navigator.clipboard.writeText(text).then(
       () => {
         if (type === "mnemonic") {
-          setMnemonicCopied(true); // Set mnemonicCopied to true
-          setTimeout(() => setMnemonicCopied(false), 3000); // Revert after 3 seconds
+          setMnemonicCopied(true);
+          setTimeout(() => setMnemonicCopied(false), 3000);
         } else if (isEth) {
           updateCopyStatusEth(index, type);
         } else {
@@ -115,6 +116,15 @@ export default function Home() {
     }
   }
 
+  function togglePrivateKeyVisibility(walletNumber, isEth = false) {
+    const updatedVisibility = {
+      ...showPrivateKeys,
+      [`${walletNumber}-${isEth ? "eth" : "sol"}`]:
+        !showPrivateKeys[`${walletNumber}-${isEth ? "eth" : "sol"}`],
+    };
+    setShowPrivateKeys(updatedVisibility);
+  }
+
   function handleRefresh(index) {
     console.log(`Refresh balance for wallet ${index}`);
   }
@@ -126,10 +136,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="h-full w-screen p-8 bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
-      <div className="mt-7 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md w-full max-w-md">
+    <div className="min-h-screen w-full p-8 bg-gradient-to-r from-blue-950 via-purple-900 to-indigo-900 flex flex-col items-center text-white transition-all duration-500">
+      <div className="mt-7 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-lg animate-fadeIn">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-200">
             Your Seed Phrase
           </h2>
           <Button
@@ -144,192 +154,204 @@ export default function Home() {
             Copy
           </Button>
         </div>
-        <div className="text-center font-mono break-all">{mnemonic}</div>
+        <div className="grid grid-cols-2 gap-2 text-center font-mono break-all">
+          {mnemonic.split(" ").map((word, index) => (
+            <span
+              key={index}
+              className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg text-gray-800 dark:text-gray-300"
+            >
+              {word}
+            </span>
+          ))}
+        </div>
       </div>
-<div className=" flex   items-start justify-start   flex-col sm:flex-row  w-full ">
- {/* Solana Wallet Generation */}
- <div className=" h-full flex  w-1/2   p-8  ml-9 mx-4   ">
-        <div>
-         <div className=" w-full flex justify-center items-center">
-         <Button
+
+      <div className="flex justify-between w-full mt-10 space-x-8">
+        {/* Left Column - Solana Wallets */}
+        <div className="w-1/2 h-fit max-h-[170vh] overflow-y-auto scrollbar-hide">
+          <div className=" flex w-full justify-center items-center">
+          <Button
             onClick={generateSolanaWallet}
-            className="mt-8 bg-blue-500 text-white hover:bg-blue-600"
+            className="mt-4  p-4 px-7 bg-pink-500 hover:bg-pink-600 transition-colors duration-300"
           >
             Generate Solana Wallet
           </Button>
-         </div>
-          <div className="mt-8 w-full max-w-md">
-            {wallets.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
-                  Generated Solana Wallets
-                </h3>
-                {wallets.map((wallet, index) => (
-                  <div
-                    key={index}
-                    className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-lg shadow-md transform transition-transform duration-300 hover:scale-105 hover:shadow-lg relative"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Wallet #{wallet.number}</span>
-                    </div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Public Key:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-300 break-all">
-                          {wallet.publicKey}
-                        </span>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(wallet.publicKey, index, "publicKey")
-                          }
-                          className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
-                        >
-                          {wallet.publicKeyCopied ? (
-                            <CheckIcon className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <ClipboardIcon className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Private Key:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-300 break-all">
-                          {wallet.privateKey}
-                        </span>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(wallet.privateKey, index, "privateKey")
-                          }
-                          className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
-                        >
-                          {wallet.privateKeyCopied ? (
-                            <CheckIcon className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <ClipboardIcon className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold">Balance:</span>
-                      <div className="flex items-center space-x-2">
-                        <span>{wallet.balance}</span>
-                        <button
-                          onClick={() => handleRefresh(index)}
-                          className="text-gray-500 dark:text-gray-300 hover:text-gray-700"
-                        >
-                          <RefreshCcw className="w-5 h-5" />
-                        </button>
-                      </div>
+          </div>
+          <div className="mt-8 space-y-6">
+            {wallets.length > 0 ? (
+              wallets.map((wallet, index) => (
+                <div
+                  key={index}
+                  className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg transition-transform duration-300 hover:scale-105"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Wallet #{wallet.number}</span>
+                  </div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Public Key:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 break-all">
+                        {wallet.publicKey}
+                      </span>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(wallet.publicKey, index, "publicKey")
+                        }
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {wallet.publicKeyCopied ? (
+                          <CheckIcon className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Private Key:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 break-all">
+                        {showPrivateKeys[`${wallet.number}-sol`]
+                          ? wallet.privateKey
+                          : "••••••••••••"}
+                      </span>
+                      <button
+                        onClick={() => togglePrivateKeyVisibility(wallet.number, false)}
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {showPrivateKeys[`${wallet.number}-sol`] ? (
+                          <EyeSlashIcon className="w-5 h-5" />
+                        ) : (
+                          <EyeIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(wallet.privateKey, index, "privateKey")
+                        }
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {wallet.privateKeyCopied ? (
+                          <CheckIcon className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-gray-800 dark:text-gray-200">Balance:</span>
+                      <span className="text-gray-800 dark:text-gray-400">{wallet.balance}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRefresh(index)}
+                      className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                    >
+                      <RefreshCcw className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-300">No Solana wallets generated yet.</p>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Ethereum Wallet Generation */}
-      <div className="h-full flex  w-1/2   p-8  ml-5  mx-4 ">
-        <div>
-         <div className=" w-full flex justify-center items-center">
+        {/* Right Column - Ethereum Wallets */}
+        <div className="w-1/2 h-fit max-h-[130vh] overflow-y-auto scrollbar-hide">
+         <div className=" flex justify-center items-center w-full   z-10">
          <Button
             onClick={generateEthWallet}
-            className="mt-8 bg-blue-500 text-white hover:bg-blue-600"
+            className="mt-4  p-4  px-6 bg-teal-500 hover:bg-teal-600 transition-colors duration-300"
           >
             Generate Ethereum Wallet
           </Button>
+
          </div>
-          <div className="mt-8 w-full max-w-md">
-            {ethWallets.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
-                  Generated Ethereum Wallets
-                </h3>
-                {ethWallets.map((wallet, index) => (
-                  <div
-                    key={index}
-                    className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-lg shadow-md transform transition-transform duration-300 hover:scale-105 hover:shadow-lg relative"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Wallet #{wallet.number}</span>
-                    </div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Public Key:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-300 break-all">
-                          {wallet.publicKey}
-                        </span>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(
-                              wallet.publicKey,
-                              index,
-                              "publicKey",
-                              true
-                            )
-                          }
-                          className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
-                        >
-                          {wallet.publicKeyCopied ? (
-                            <CheckIcon className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <ClipboardIcon className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold">Private Key:</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-300 break-all">
-                          {wallet.privateKey}
-                        </span>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(
-                              wallet.privateKey,
-                              index,
-                              "privateKey",
-                              true
-                            )
-                          }
-                          className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
-                        >
-                          {wallet.privateKeyCopied ? (
-                            <CheckIcon className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <ClipboardIcon className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold">Balance:</span>
-                      <div className="flex items-center space-x-2">
-                        <span>{wallet.balance}</span>
-                        <button
-                          onClick={() => handleRefresh(index)}
-                          className="text-gray-500 dark:text-gray-300 hover:text-gray-700"
-                        >
-                          <RefreshCcw className="w-5 h-5" />
-                        </button>
-                      </div>
+          <div className="mt-8 space-y-6">
+            {ethWallets.length > 0 ? (
+              ethWallets.map((wallet, index) => (
+                <div
+                  key={index}
+                  className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg transition-transform duration-300 hover:scale-105"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Wallet #{wallet.number}</span>
+                  </div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Public Key:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 break-all">
+                        {wallet.publicKey}
+                      </span>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(wallet.publicKey, index, "publicKey", true)
+                        }
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {wallet.publicKeyCopied ? (
+                          <CheckIcon className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-bold text-gray-800 dark:text-gray-200">Private Key:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 break-all">
+                        {showPrivateKeys[`${wallet.number}-eth`]
+                          ? wallet.privateKey
+                          : "••••••••••••"}
+                      </span>
+                      <button
+                        onClick={() => togglePrivateKeyVisibility(wallet.number, true)}
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {showPrivateKeys[`${wallet.number}-eth`] ? (
+                          <EyeSlashIcon className="w-5 h-5" />
+                        ) : (
+                          <EyeIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(wallet.privateKey, index, "privateKey", true)
+                        }
+                        className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                      >
+                        {wallet.privateKeyCopied ? (
+                          <CheckIcon className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <ClipboardIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-gray-800 dark:text-gray-200">Balance:</span>
+                      <span className="text-gray-800 dark:text-gray-400">{wallet.balance}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRefresh(index)}
+                      className="text-blue-500 dark:text-blue-300 hover:text-blue-600"
+                    >
+                      <RefreshCcw className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-300">No Ethereum wallets generated yet.</p>
             )}
           </div>
         </div>
       </div>
-
-</div>
-   
-      
     </div>
   );
 }
